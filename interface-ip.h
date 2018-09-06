@@ -48,6 +48,9 @@ enum device_addr_flags {
 
 	/* route overrides the default route type */
 	DEVROUTE_TYPE		= (1 << 10),
+
+	/* route overrides the default interface gateway */
+	DEVROUTE_GATEWAY	= (1 << 11),
 };
 
 union if_addr {

@@ -284,6 +284,8 @@ static void
 interface_set_route_info(struct interface *iface, struct device_route *route)
 {
 	bool v6 = ((route->flags & DEVADDR_FAMILY) == DEVADDR_INET6);
+	union if_addr addr_zero;
+	struct device_route *default_route = NULL;
 
 	if (!iface)
 		return;
@@ -295,6 +297,20 @@ interface_set_route_info(struct interface *iface, struct device_route *route)
 		route->table = (v6) ? iface->ip6table : iface->ip4table;
 		if (route->table)
 			route->flags |= DEVROUTE_SRCTABLE;
+	}
+
+	if (!(route->flags & DEVROUTE_GATEWAY)) {
+		D(INTERFACE, "Using interface gateway for route\n");
+		memset(&addr_zero, 0, sizeof(addr_zero));
+		D(INTERFACE, "Searching for default root...\n");
+		interface_ip_find_route_target(iface, &addr_zero, v6, &default_route);
+		if (default_route == NULL)
+			DPRINTF("Failed to get interface '%s' default gateway for static route without gateway\n", iface->name);
+		else {
+			D(INTERFACE, "Found %i.%i.%i.%i\n", (default_route->nexthop.in.s_addr && 0xff000000 >> 24), (default_route->nexthop.in.s_addr && 0x00ff0000 >> 16), (default_route->nexthop.in.s_addr && 0x0000ff00 >> 8), (default_route->nexthop.in.s_addr && 0x000000ff) );
+			route->nexthop = default_route->nexthop;
+			D(INTERFACE, "Done!\n");
+		}
 	}
 }
 
@@ -345,6 +361,7 @@ interface_ip_add_route(struct interface *iface, struct blob_attr *attr, bool v6)
 			DPRINTF("Failed to parse route gateway: %s\n", (char *) blobmsg_data(cur));
 			goto error;
 		}
+		route->flags |= DEVROUTE_GATEWAY;
 	}
 
 	if ((cur = tb[ROUTE_METRIC]) != NULL) {
