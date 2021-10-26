@@ -301,9 +301,26 @@ interface_ip_add_target_route(union if_addr *addr, bool v6, struct interface *if
 	route->mask = v6 ? 128 : 32;
 	memcpy(&route->addr, addr, addrsize);
 	memcpy(&route->nexthop, &r_next->nexthop, sizeof(route->nexthop));
-	route->mtu = r_next->mtu;
-	route->metric = r_next->metric;
-	route->table = r_next->table;
+	if (r_next->flags & DEVROUTE_MTU) {
+		route->mtu = r_next->mtu;
+		route->flags |= DEVROUTE_MTU;
+	}
+	if (r_next->flags & DEVROUTE_METRIC) {
+		route->metric = r_next->metric;
+		route->flags |= DEVROUTE_METRIC;
+	}
+	if (r_next->flags & DEVROUTE_TABLE) {
+		route->table = r_next->table;
+		route->flags |= DEVROUTE_TABLE;
+	}
+	if (r_next->flags & DEVROUTE_TYPE) {
+		route->type = r_next->type;
+		route->flags |= DEVROUTE_TYPE;
+	}
+	if (r_next->flags & DEVROUTE_ONLINK)
+		route->flags |= DEVROUTE_ONLINK;
+	memcpy(&route->source, &r_next->source, addrsize);
+	route->sourcemask = r_next->sourcemask;
 	route->iface = iface;
 	vlist_add(&iface->host_routes, &route->node, route);
 
